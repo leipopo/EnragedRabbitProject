@@ -446,6 +446,7 @@ class Ercf:
 
     cmd_ERCF_CALIB_SELECTOR_help = "Calibration of the selector position for a defined Tool"
     def cmd_ERCF_CALIB_SELECTOR(self, gcmd):
+        self._servo_down()
         self._servo_up()
         tool = gcmd.get_int('TOOL', 0, minval=0)
         move_length = 20 + (tool + 1) * 21 + ((tool + 1) / 3) * 5
