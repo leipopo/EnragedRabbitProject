@@ -86,6 +86,7 @@ class Ercf:
         self.extra_servo_dwell_down = config.getint('extra_servo_dwell_down', 0)
         self.extra_servo_dwell_up = config.getint('extra_servo_dwell_up', 0)
         self.end_of_bowden_to_nozzle = config.getfloat('end_of_bowden_to_nozzle', above=30.)
+        self.preload_length_at_end_of_bowden = config.getfloat('preload_length_at_end_of_bowden', above=0.5)
         self.num_moves = config.getint('num_moves', 2)
         self.parking_distance = config.getfloat('parking_distance', 23., above=15., below=30.)
         self.encoder_move_step_size = config.getfloat('encoder_move_step_size', 15., above=5., below=25.)
@@ -481,6 +482,7 @@ class Ercf:
         accel = gcmd.get_float('ACCEL', self.long_moves_accel, above=0.)
         plus_values, min_values = [], []
 
+        self._servo_down()
         for x in range(repeats):
             # Move forward
             self._counter.reset_counts()
@@ -522,6 +524,7 @@ class Ercf:
                           % resolution)
         gcmd.respond_info("After calibration measured length = %.6f" 
                           % new_result)        
+        self._servo_up()
 
     cmd_ERCF_TEST_GRIP_help = "Test the ERCF grip for a Tool"
     def cmd_ERCF_TEST_GRIP(self, gcmd):
@@ -985,11 +988,19 @@ class Ercf:
             return
 
         self._log_debug("Loading to the nozzle")
-
-        self._servo_up()      
+        
+        self._counter.reset_counts()   
+        pos = self.toolhead.get_position()
+        pos[3] += self.preload_length_at_end_of_bowden
+        self.toolhead.manual_move(pos, 20)
+        self.toolhead.dwell(0.2)
+        self.toolhead.wait_moves()
+        self._log_debug("preload to the nozzle")
+        self._servo_up()    
+        
         self._counter.reset_counts()    
         pos = self.toolhead.get_position()
-        pos[3] += self.end_of_bowden_to_nozzle
+        pos[3] += self.end_of_bowden_to_nozzle-self.preload_length_at_end_of_bowden
         self.toolhead.manual_move(pos, 20)
         self.toolhead.dwell(0.2)
         self.toolhead.wait_moves()
