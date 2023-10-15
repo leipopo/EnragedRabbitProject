@@ -940,8 +940,15 @@ class Ercf:
         self._log_debug("Unloading from end of bowden")
 
         self._servo_down()
-        self.toolhead.dwell(0.2)
-        self.toolhead.wait_moves()
+
+        # self.gear_stepper.do_set_position(0.0)
+        # self.gear_stepper.do_move(-self.preload_length_at_end_of_bowden, 20, self.gear_stepper_accel)
+        # pos = self.toolhead.get_position()
+        # pos[3] -= self.preload_length_at_end_of_bowden
+        # self.toolhead.manual_move(pos, 20)
+
+        # self.toolhead.dwell(0.2)
+        # self.toolhead.wait_moves()
 
         self._counter.reset_counts()
 
@@ -1165,32 +1172,41 @@ class Ercf:
 
         self._log_debug("Loading to the nozzle")
 
-        step_len = 2.0
-
         pos = self.toolhead.get_position()
-        pos[3] += 5.0
+        pos[3] += 5
         self.toolhead.manual_move(pos, 20)
+        self.toolhead.wait_moves()
 
-        for i in range(int((self.preload_length_at_end_of_bowden - 5) / step_len)):
-            self.gear_stepper.do_set_position(0.0)
-            self.gear_stepper.do_move(step_len, 20, self.gear_stepper_accel)
-
-            pos = self.toolhead.get_position()
-            pos[3] += step_len
-            self.toolhead.manual_move(pos, 20)
-
+        pos[3] += self.preload_length_at_end_of_bowden
+        self.gear_stepper.do_set_position(0.0)
+        self.gear_stepper.do_move(
+            self.preload_length_at_end_of_bowden,
+            30,
+            self.toolhead.max_accel,
+            sync=False,
+        )
+        self.toolhead.manual_move(pos, 30)
         self.toolhead.dwell(0.2)
         self.toolhead.wait_moves()
+        # for i in range(int((self.preload_length_at_end_of_bowden - 5) / step_len)):
+        #     self.gear_stepper.do_set_position(0.0)
+        #     self.gear_stepper.do_move(step_len, 20, self.gear_stepper_accel)
+
+        #     pos = self.toolhead.get_position()
+        #     pos[3] += step_len
+        #     self.toolhead.manual_move(pos, 20)
+        #     self.toolhead.dwell(0.2)
+        #     self.toolhead.wait_moves()
+
         self._log_debug("preload to the nozzle")
         self._servo_up()
 
         self._counter.reset_counts()
         pos = self.toolhead.get_position()
         pos[3] += (
-            self.end_of_bowden_to_nozzle
-            - (int((self.preload_length_at_end_of_bowden - 5) / step_len) * step_len)
-            - 5
+            self.end_of_bowden_to_nozzle - self.preload_length_at_end_of_bowden - 5
         )
+
         self.toolhead.manual_move(pos, 20)
         self.toolhead.dwell(0.2)
         self.toolhead.wait_moves()
